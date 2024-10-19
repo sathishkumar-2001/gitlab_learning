@@ -1,0 +1,35 @@
+GitLab brings the complete DevSecOps lifecycle into a single comprehensive platform. 
+It includes everything from Source Code Management, CI/CD, Integrated Security, and much more to meet all of your development requirements
+
+For example, when approaching a software project, Developers need to consider tools for:
+
+Project planning
+Source Code Management
+Continuous Integration
+Infrastructure configuration
+Incident Monitoring
+Application Security
+Compliance Assurance
+
+
+To that end, GitLab fundamentally changes the way that organizations approach DevSecOps.
+GitLab offers a Single DevSecOps Platform in which a single application with a logical set of DevSecOps capabilities replaces the overhead and confusion of disparate 
+DevSecOps tools and provides visibility, control, and collaboration through all parts of the DevSecOps lifecycle.
+
+GitLab is a Single DevSecOps Platform
+
+There are three types of Version Control Systems:
+Local Version Control Systems
+Centralized Version Control Systems (CVCS)
+Distributed Version Control Systems (DVCS)
+What does a tag do?
+Marks a specific point in time on a branch, used to mark a code version release
+
+The three most well-known version control tools (also known as revision control systems) are Git, Subversion (SVN), and Mercurial.
+In the usual Git flow, there are five different branch types: 
+Main (or Master) - created at the start of a project and is maintained throughout the development process. The main branch in the Git flow should contain production-ready code that can be released.
+Develop - Created at the start of a project; contains pre-production code with newly developed features that are in the process of being tested.
+Feature - the most common type of branch in the Git flow. It is used when adding new features to the code, basically the working branch which will be merged back into the development branch when the feature is ready
+Release - used when preparing new production releases
+Hotfix - used to quickly address necessary changes in the main branch
+
