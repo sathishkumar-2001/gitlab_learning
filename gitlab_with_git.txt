@@ -33,3 +33,143 @@ Feature - the most common type of branch in the Git flow. It is used when adding
 Release - used when preparing new production releases
 Hotfix - used to quickly address necessary changes in the main branch
 
+
+GitLab flow is yet a further refinement of Git Flow and GitHub Flow.
+
+We create additional branches to our feature branches, that are ephemeral and lightweight. We integrate then destroy them.
+
+So it solves this challenge by integrating the Git workflow with an issue tracking system and ability to create dedicated branches for environments and releases.
+
+Branching tips & tricks
+
+The default branch (named Master if no custom name is set) cannot be deleted
+The default branch is initially protected against forced pushes
+You can manage your branches:
+With the GitLab user interface
+With the command line
+With the Branches API
+GitLab branching benefits
+Be able to maintain multiple environments
+Staging environment separate from the production environment
+Provides isolation between environments allowing developers to maintain multiple versions of software in different environments
+
+The GitLab flow lets you incorporate these differently-named environment branches that are automatically updated to the master branch.
+
+Branches are the foundation of development in a project.
+
+
+Branching tips & tricks
+
+The default branch (named Master if no custom name is set) cannot be deleted
+The default branch is initially protected against forced pushes
+You can manage your branches:
+With the GitLab user interface
+With the command line
+With the Branches API
+GitLab branching benefits
+Be able to maintain multiple environments
+Staging environment separate from the production environment
+Provides isolation between environments allowing developers to maintain multiple versions of software in different environments
+While other Git flows assume you can deploy to production every time you merge a feature branch, this is possible in some cases, such as SaaS applications, but there are some cases where this is not possible, such as:
+
+You don’t control the timing of a release. For example, an iOS application that is released when it passes App Store validation.
+You have deployment windows - for example, workdays from 10 AM to 4 PM when the operations team is at full capacity - but you also merge code at other times.
+In these cases, you can create a production branch that reflects the deployed code. You can deploy a new version by merging master into the production branch. If you need to know what code is in production, you can check out the production branch to see.
+
+
+Project	The core building block where work is organized, managed, tracked and delivered to help the team to collaborate and plan work in the form of issues. ->	Repository
+Group	A collection of projects and/or other groups. They are like folders. ->	Project
+Issue	An issue is part of a project. It is the fundamental planning object where the team documents the use case in the description, discusses the approach, estimates the size/effort (issue weight), tracks actual time/effort, assigns work, and tracks progress.  ->	Story, Narrative, Ticket
+Epic	A collection of related issues across different groups and projects to help organize by theme -> Initiatives, Themes
+Merge Request	The linkage between the issue and the actual code changes. Captures the design, implementation details (code changes), discussions (code reviews), approvals, testing (CI Pipeline), and security scans. -> Pull Request
+Label	Used to tag and track work for a project or group and associate issues with different initiatives -> Tag
+Board	A visual listing of projects and issues useful for teams to manage their backlog of work, prioritize items, and move issues to the team or specific stage in the project. -> Kanban
+Milestone	A sprint or deliverable(s), helping you organize code, issues, and merge requests into a cohesive group -> Release
+Roadmap	A visual representation of the various epics for the group
+
+
+Additional Tools Used for Code Review & Collaboration
+gitlab snippets
+wikis
+web IDE
+
+Key things to remember
+
+GitLab Projects are housed within Groups
+
+Groups can have any number of Subgroups
+
+Permissions are inherited down from the top-level groups, so add users with the least permission and give them higher permissions at the Subgroup or Project level
+
+Labels and Milestones created at the top-group level and are available to all Subgroups and Projects so add shared labels at the highest level possible
+
+issues -> Common use cases include:
+
+Discussing the implementation of a new idea
+Tracking tasks and work status
+Accepting feature proposals, questions, support requests, or bug reports
+Elaborating on new code implementations
+
+
+structure of gitlab flow
+
+Group -> Subgroup -> project -> Issue -> comments , participants , Assignments
+
+gitlab epics
+Key things to remember
+
+Epics are defined at the Group level.
+Epics can contain both issues and epics as children.
+Epics can be used as a filter in issue lists and issue boards.
+Epics provide visibility on child epics, issue statuses, and the roadmap timeline.
+Epics do not have an Assignee.
+Epics cannot be created in Projects.
+
+
+gitlab issues
+
+Issues are the basic building blocks of planning development work and are used to collaborate on ideas and planning work in GitLab. You should create a new issue whenever you are developing a new feature to be implemented in one of your applications. When you create an issue in GitLab, you can view multiple DevOps Lifecycle Stage properties, such as the related epics, merge requests, milestone dates, boards, roadmaps, labels, and more.
+
+You can also use issues for:
+
+Discussing the implementation of a new idea
+
+Managing an incident
+
+Asking questions
+
+Reporting bugs
+
+Key things to remember
+
+Issues are defined in the scope of a Project, not a Group.
+
+
+Issues only exist in projects. While Groups have boards that manage issues and lists of issues, the issues always are stored in a project that is subordinate to the group.
+GitLab Groups do not have issues. Groups have Epics.
+An issue can only be the child of a single epic.
+Limitations: An issue cannot be added to more than one Milestone.
+
+
+Labels in GitLab
+Labels are a powerful, flexible way to categorise Epics, Issues, and Merge Requests.
+
+When applied appropriately and consistently, Labels enable GitLab users to discover (search), filter, manage, and report on multiple work items.
+
+By default, Labels are not exclusive. An Epic, Issue, or Merge Request can be labeled multiple times by multiple people, sup
+
+porting many different use cases and views. The exception to this rule is the Scoped Label, which specifies a set of mutually exclusive Labels. When one Scoped Label is applied, it automatically replaces any previous Label in that set. 
+
+Scoped Labels are used to:
+
+Assign status
+Support workflows
+Segment items into "either / or" situations
+
+
+GitLab CI/CD
+Continuous Integration (CI) is a collaborative software development practice where developers frequently integrate their code changes into a shared repository. Automated builds and tests are then run to validate the changes, ensuring code quality. CI fosters collaboration among team members by promoting regular code integration, early issue detection, and a collective approach to maintaining a stable and reliable codebase.
+
+Continuous Delivery (CD) is a software development practice that aims to automate and streamline the process of delivering code changes to production environments in a frequent and reliable manner. This approach helps ensure that software is always in a releasable state, making it easier to respond to customer feedback, deliver new features, and fix bugs promptly.
+
+
