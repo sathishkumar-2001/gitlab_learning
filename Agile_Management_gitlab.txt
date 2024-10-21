@@ -1,0 +1,65 @@
+GitLab Agile Project Management
+
+Agile Planning with GitLab
+Development teams continue to manage their software development with iterative, incremental, and lean project methodologies, such as Scrum, Kanban, and Extreme Programming (XP). Large enterprises have adopted Agile at enterprise scale through a variety of frameworks, including Scaled Agile Framework (SAFe), Spotify, and Large Scale Scrum (LeSS). GitLab enables lean and Agile project management from basic issue tracking to Scrum and Kanban-style project management.
+
+GitLab enables teams to apply Agile practices and principles to organize and manage their work, whatever their chosen methodology.
+
+Roles in gitlab 
+
+Owner /Maintainer -> add or delete members , all permissions
+Developer -> read , write modify epics issues
+Reporter -> Read only contributer , they can only view
+
+GitLab Component	Function	Also Known As...
+Issue	An issue is part of a project, specifically, user stories which describe the required functionality It is the fundamental planning object where the team documents the use case in the description, discusses the approach, estimates the size/effort (issue weight), tracks actual time/effort, assigns work, and tracks progress. 	User Story, Narrative, Ticket, Bug, Incident
+Tasks	Tasks describe small, discrete pieces of work which together, implement the Issue.	
+Epic	Overarching capability or strategic concept; a collection of related issues across different groups and projects to help organize by theme.	Capability, Initiatives, Themes
+Sub Epic	Standalone features which individually deliver value to users	Feature
+Milestone	A sprint or deliverable(s), helping you organize code, issues, and merge requests into a cohesive group or major achievements for the overarching capability. Milestones are made up of one or more completed features and are time boxed. can be used as timeboxes to sequence larger capabilities over longer planning horizons, such as PI (program increment) or release planning.	Release
+Iterations	Iterations are development sprints with a fixed cadence and are time boxed. Individual user stories (Issues) are assigned to iterations and are a way to track issues over a period of time. This allows teams to track velocity and volatility metrics. Iterations are designed for single teams practicing Scrum, ExtremeProgramming, or a similar agile methodology.	Sprint
+
+to complete the milestone we will be doing iterations like iteration 1 , 2 ...
+
+
+
+Milestones
+Milestones in GitLab are a way to track issues and merge requests created to achieve a broader goal in a certain period of time. Milestones allow you to organize issues and merge requests into a cohesive group, with an optional start date and an optional due date.
+
+For example, if you have a lot of issues related to a specific deliverable or goal, you can create a milestone and assign all of the issues to it.
+
+Key features/functions
+
+You can assign both issues and merge requests to milestones
+Everything assigned to the same milestone shares the same start date and end date
+Milestones can exist at the project or group level
+The milestone view also contains a burndown and burnup chart showing the progress of completing a milestone
+
+
+
+Iterations
+Iterations are a way to track issues over a period of time. This allows teams to track velocity and volatility metrics. For tracking over different time periods, you can use iterations milestones. You can create and manage various iteration cadences.
+
+For example, you can use:
+
+Milestones for Program Increments, which span 8-12 weeks.
+Iterations for Sprints, which span 2 weeks.
+
+Key features/functions
+
+You can consider an iteration like a sprint and assign issues to your iterations
+Iterations are at the group level only and groups can have only 1 active iteration at a time
+Iterations are grouped into iteration cadences
+Iterations require start and end dates
+Iteration date ranges cannot overlap within an iteration cadence
+The iteration detail page shows you overall % complete as well as burndown and burnup charts
+
+Issues: The Building Blocks of GitLab
+
+YOUR ISSUE IS THE SINGLE SOURCE OF TRUTH
+
+Issue Description Templates
+You can define templates to use as descriptions for your issues and merge requests. 
+
+
+Issue Board Terminology
