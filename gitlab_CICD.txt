@@ -1,0 +1,156 @@
+Continuous Delivery requires manually triggering a deployment while Continuous Deployment is set to deploy automatically.
+
+.gitlab-ci.yml
+
+simple pipeline file
+
+stages:
+     - build
+	 - test
+	 - deploy
+
+build-job:
+    stage: build
+	script: 
+	      - echo "hello"
+		  
+		  
+		  
+
+A Note on Pipeline Types
+So far we've focused on basic pipelines, or the simplest pipeline type in GitLab. We won't get into the details of the different pipeline types in this course but you saw a preview of a Directed Acyclic Graph in the GitLab pipeline. Other pipeline types include:
+
+Parent-child pipelines: a pipeline that triggers a set of concurrently running child pipelines.
+Multi-project pipelines: a pipeline in one project triggers a pipeline in another project.
+Merge request pipelines: a pipeline that runs every time you make changes to the source branch for a merge request.
+Merge trains: queue merge requests and verify their changes work together before they're merged to the target branch. 
+
+SaaS vs. Self-Managed Runners
+
+If you use GitLab.com, you can run your CI/CD jobs on SaaS runners, which are enabled by default for all projects. These runners are managed by GitLab and are fully integrated with GitLab.com with no configuration required. There are usage charges with using SaaS runners so you’ll want to be aware of your organization’s compute minutes, or, quota. The way a SaaS runner works is it runs your job in a newly provisioned VM, which is dedicated to the specific job. This VM is only active for the duration of the job and is then immediately deleted. On GitLab SaaS, two CI jobs never run on the same VM.
+
+SaaS runners are a secure, out-of-the-box way to run your pipelines and we have detailed documentation on the different available runners. But GitLab also provides the ability to bring your own runners. For customers with a self-managed GitLab instance, you’ll need to register your own runners. If you use GitLab.com, you can choose either the SaaS runners or registering your own. Because of the variety of configuration options, this course focuses on registering and configuring your own runners.
+
+GitLab Runners -> R 
+registered runners -> r
+
+first we need to install Gitlab Runners on my local 
+GitLab Runners is a separate from GitLab
+
+Types of Runners
+specific Runners
+Group Runners
+Shared Runners
+
+Executers -> linux and Docker
+
+There are still more options for configuring the behavior of GitLab Runner and individual registered runners. This is done in a file called config.toml. We won’t cover these advanced configuration options in this course, but you can check out the Advanced Configuration documentation if you’d like to learn more.
+
+
+To use a machine type other than small, add a tags: keyword to your job. For example:
+
+job_small:
+  script:
+    - echo "This job is untagged and runs on the default small Linux x86-64 instance"
+
+job_medium:
+  tags:
+    - saas-linux-medium-amd64
+  script:
+    - echo "This job runs on the medium Linux x86-64 instance"
+
+job_large:
+  tags:
+    - saas-linux-large-arm64
+  script:
+    - echo "This job runs on the large Linux Arm64 instance"
+	
+	
+
+Pipeline configuration is all about using and defining the right keywords. These keywords can be global, which apply to the entire pipeline, or job specific. In this module, we’ll focus on the first one - how global keywords configure pipeline behavior. Some common global keywords are:
+
+Default - custom default values for job keywords.
+Stages - lists the names and order of the pipeline stages.
+Variables - defines CI/CD variables for all jobs in the pipeline.
+Include - imports configuration from other YAML files.
+
+
+Defaults
+As the name implies, defaults indicate values or parameters that apply to every job in the pipeline, unless the job already has it defined. If the job already has a keyword defined, that default isn’t used. 
+
+Defaults are listed as a block at the top of the YAML file. There are several keywords that can be defined as defaults such as specifying the number of times a job should retry if failed, which tags the runner should have to pick up the job, and which scripts should run at the beginning of a job. 
+
+Two of the most commonly defined defaults are indicating images and services. Here's an example of what this might look like:
+
+default:
+  image: ruby:2.6
+  services:
+    - postgres:11.7
+	
+image: 'registry.gitlab.com/gitlab-org/ci-training-sample:latest'
+
+The services keyword allows us to augment our base image with an additional image if one container isn't enough. This additional image is used to create another container, which is available for the first container. These two containers have access to one another and can communicate when running the job.
+
+The service image can run any application, but the most common use case is to run a database container as we've done in the example above by adding a Postgres container. 
+
+
+
+Rules
+
+Objective: By the end of this module, you should be able to create rules to modify pipeline behavior
+
+Rules are a way to define under what conditions a job should run. Have a deploy job that should only be run on a particular branch? Want to skip a job if no changes are made to a corresponding file? Need to delay when a job runs to avoid peak hours? The rules syntax in your YAML file can be configured to handle all of these use cases. Order matters
+
+Rules are evaluated in order until the first match, so order matters. When the first condition is met, the job is either included or excluded from the pipeline depending on the configuration.
+
+In this video, we’ll go over some of the syntax rules for structuring your conditions and resulting behavior.
+
+Rules syntax
+clauses -> if , changes , exists
+operators -> == , != , =~ , !~ , && , || 
+Results -> when , allow_failure , start_in 
+when -> Always , Never , On_success , On_failure , Manual , Delayed 
+
+
+Rules determine whether or not a job is added to a pipeline. Alternatively, the only/except keywords have a similar functionality but work differently. We've chosen to focus on rules in this course because of the added flexibility and familiarity with common if/else statements. That being said, the distinction between the two can cause some pipeline errors (e.g., a job doesn't run when you expect it to). If you're moving from a configuration that uses only/except to a configuration using rules, be sure to review the docs carefully to understand the differences in behavior. You shouldn't use rules and only/except in the same pipeline. Since they behave differently, you might experience unpredictable results or pipeline errors. Choose one configuration and stick with it.
+
+
+
+Run Jobs Out of Order or in Parallel
+Expand the list below to learn more about two additional keywords that change when jobs execute.
+
+Needs
+The needs keyword enables executing jobs out-of-order, allowing you to implement a directed acyclic graph (DAG) in your CI configuration.
+
+This lets you run some jobs without waiting for other ones, disregarding stage ordering so you can have multiple stages running concurrently. You can ignore stage ordering and run some jobs without waiting for others to complete. Jobs in multiple stages can run concurrently. See below for an example YAML with needs utilized.
+
+
+Parallel
+Use parallel to configure how many instances of a job to run in parallel. The value can be from 1 to 200.
+
+The parallel keyword creates N instances of the same job that run in parallel. They are named sequentially from job_name 1/N to job_name N/N:
+
+
+HOW WE CAN REUSE THE Pipeline
+
+
+Leveraging Templates using include keyword
+
+Objective: By the end of this module, you should be able to:
+
+Create a CI/CD pipeline using an existing template.
+Apply Auto DevOps to a GitLab project.
+Recognize how to share and extend configuration files.
+
+Extending Your Configuration
+You can reduce complexity and duplicated configuration in your GitLab CI/CD configuration files by following the DRY principle, or Don't Repeat Yourself. A flexible option for reusing pipeline configuration sections is to use the extends keyword. This is similar to YAML anchors but allows you to reuse configurations from different YAML files. 
+
+
+Shifting Left
+
+
+You may have heard the term "shifting security left" before, but if you haven't, what we essentially mean is moving the security testing process sooner in the development lifecycle. Rather than waiting towards the end of development to confirm there aren't any vulnerabilities, shifting left means incorporating these scans in the day-to-day developer workflow. And having automated testing as part of your CI/CD pipeline is how you can truly implement this at scale.
+
+Security scanners like Static Application Security Testing (SAST), Dynamic Application Security Testing (DAST), secret detection, and container scanning can all be enabled by adding the templates to your YAML file. We have an entire learning path of content related to security that outlines the available security scanners, including how to enable them, how to view and triage vulnerabilities, and considerations for compliance. Be sure to check out our content catalog to learn more and enroll.
+
+For this module, we'll focus on SAST - the security scanner that scans your source code for vulnerabilities without actually running the code. In the upcoming lab, you'll practice including a template by adding the SAST scanner to your pipeline. 
