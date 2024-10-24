@@ -1,0 +1,251 @@
+Security in the DevSecOps (SDLC) Lifecycle
+The below image shows the 10 stages of the DevSecOps Lifecycle. 
+
+In broad strokes, the DevSecOps lifecycle can be roughly split into two phases:
+
+Development - The "left side" of the lifecycle: The planning, defining, and writing of software
+Operations - The "right side" of the lifecycle: Deploying and actually running the software
+
+GitLab offers multiple security scanners along with a variety of reporting and management features: 
+
+
+
+Security Scanners in gitlab
+
+Static Application Security Testing (SAST)
+Secret Detection
+Dynamic Application Security Testing (DAST)
+Dependency Scanning
+Container Scanning
+Fuzz Testing
+Infrastructure-as-Code (IaC) Scanning
+
+
+Auto DevOps is an optional GitLab feature that detects your programming language and uses CI/CD templates to create and run default pipelines to build and test your application. Be aware that enabling Auto Devops will enable all security scanners which will slow down your pipeline. Learn more about GitLab Auto DevOps.
+
+
+SAST (Static Application Security Testing) scans your source code for vulnerabilities without actually running the code
+If you’re using GitLab CI/CD, you can use Static Application Security Testing (SAST) to check your source code for known vulnerabilities. The analyzers output JSON-formatted reports as job artifacts.
+
+Default - custom default values for job keywords.
+Stages - lists the names and order of the pipeline stages.
+Variables - defines CI/CD variables for all jobs in the pipeline.
+Include - imports configuration from other YAML files.
+
+STEPS FOR USING SAST
+enable by adding SAST by adding to pipeline , optionally configure sast templates
+Run the ci/cd pipeline
+look at the result of sast findings
+Take action on results
+
+include:
+  -template: Security/SAST.gitlab-ci.yml
+  
+Set severity thresholds	You want SAST to flag only critical or high severity issues based on your organization's security policy requirements.
+Disable analyzers	Your CICD pipeline is set up to potentially trigger more than one SAST analyzer but you only need a specific analyzer to run: For example, if your job is in Python, GitLab has two different Python analyzers for SAST, Bandit and Semgrep. If Bandit gives you all of the functionality you need, you can disable the Semgrep analyzer.
+Pin analyzer versions	If your security team has approved a specific analyzer version: For example, let's say that Semgrep Version 9 is approved, but Version 10 is not, you can configure the scanner to only use version 9.
+
+TAKE ACTION 
+
+Detected/Needs Triage	The default state for a newly discovered vulnerability. Appears as “Needs triage” in the UI.
+Confirmed	A user has seen this vulnerability and confirmed it to be accurate.
+Dismissed	A user has seen this vulnerability and dismissed it because it is not accurate or otherwise not to be resolved. Dismissed vulnerabilities are ignored if detected in subsequent scans.
+Resolved	The vulnerability has been fixed or is no longer present. Resolved vulnerabilities that are reintroduced and detected by subsequent scans have a new vulnerability record created.
+
+When dismissing a vulnerability, one of the following reasons must be chosen to clarify why it is being dismissed:
+
+Vulnerability Dismissal Reasons	Definition
+Acceptable risk	The vulnerability is known, and has not been remediated or mitigated, but is considered to be an acceptable business risk.
+False positive	An error in reporting in which a test result incorrectly indicates the presence of a vulnerability in a system when the vulnerability is not present.
+Mitigating Control	A management, operational, or technical control (that is, safeguard or countermeasure) employed by an organization that provides equivalent or comparable protection for an information system.
+Used in tests	The finding is not a vulnerability because it is part of a test or is test data.
+Not applicable	The vulnerability is known, and has not been remediated or mitigated, but is considered to be in a part of the application that will not be updated.
+
+
+
+Secret Detection looks for secrets inside files in your projects repo.
+
+After you enable Secret Detection, scans run in a CI/CD job named secret_detection. The analyzers output JSON-formatted reports as job artifacts.
+Secret Detection looks at past commits in your repository (the only scanner that looks at past commits).
+
+By default, Secret Detection scans only the current state of a Git repository.Any secrets contained in the repository’s history are not detected. To address this, Secret Detection can scan the Git repository’s full history.
+Recommendation: You should do a full history scan only once, after enabling Secret Detection. 
+A full history can take a long time, especially for larger repositories with lengthy Git histories. After completing an initial full history scan, use only standard Secret Detection as part of your pipeline.
+You don't want to scan all historic commits, maybe the last two hundred.
+Define which paths to exclude	You might not need to scan certain paths, for example, a test directory that might be made up of fake data. 
+
+how to enable the above in cicd 
+
+secret_detection:
+   variables:
+       SECRET_DETECTION_HISTORIC_SCAN: "true"
+	   SECRET_DETECTION_EXCLUDED_PATHS: "tests"
+	   
+	   
+	   
+	   
+DAST (Dynamic Application Security Testing) scans a running web app for security vulnerabilities. Also known as Black Box Testing.
+
+Instead of looking at your source code, like SAST and Secret Detection does, Dynamic Analysis interacts with your code as it's running. DAST looks at web apps or REST API. For URLs, DAST starts at the home page, and then spiders your site. A tester using DAST examines an application when it is running and tries to hack it, just like an attacker would.
+
+SAST can be considered white box testing, meaning that it's able to look inside your application to look at the code. DAST is black box testing, meaning that the application is tested from the outside. 
+
+The output is a DAST report artifact which GitLab uses to determine discovered vulnerabilities based on differences between scan results on the source and target branches. 
+
+
+If you deploy your web application into a new environment, your application may become exposed to new types of attacks. For example, misconfigurations of your application server or incorrect assumptions about security controls may not be visible from the source code.
+
+Dynamic Application Security Testing (DAST) examines applications for vulnerabilities like these in deployed environments. DAST automatically finds security vulnerabilities in a running web application while you can continue to develop and test it. 
+
+There are two different ways that DAST approaches scanning: 
+Passive mode is run by default - It sends normal requests to the web app and analyzes responses.
+Active mode simulates malicious behavior coming at your site, trying to break it.
+
+GitLab provides the following DAST analyzers, one or more of which may be useful depending on the kind of application you’re testing.
+
+For scanning websites, use one of:
+The DAST proxy-based analyzer for scanning traditional applications serving simple HTML. The proxy-based analyzer can be run automatically or on-demand.
+The DAST browser-based analyzer for scanning applications that make heavy use of JavaScript. This includes single page web applications.
+
+For scanning APIs, use:
+The DAST API analyzer for scanning web APIs. Web API technologies such as GraphQL, REST, and SOAP are supported.
+
+DAST uses the open-source tool OWASP Zed Attack Proxy. 
+
+include:
+  - template: DAST.gitlab-ci.yml
+  
+
+Note that there is no need to include a test stage as with SAST and Secret Detection. DAST scans deployed code and runs in its own Stage.
+
+Also note that the template is not in Security/dir, so the template format is slightly different than SAST and Secret Detection.
+
+Choose to have DAST scan your site "actively" 	By default, DAST will perform a passive scan, but you want Dynamic Analysis to actively attack your website looking for vulnerabilities. 
+Scan a URL, API, or both	You need to define where the scan should point - a REST API or URL.
+Target URL	If scanning a URL, you need to provide the URL(s) to be scanned.
+variables:
+   DAST_WEBSITE: https://www.example.com
+
+Provide authentication credentials	If you want DAST to scan a web app that requires authentication, such as a password, you need to provide what that authentication is so that Dynamic Analysis can log into your site.
+Scanner Profile	In order to create a new DAST scan, you need to have at least one completed scanner profile. The scanner profile configures how the scanner should work - Do you want Active or Passive mode? When should the scanner timeout? Do you want to show debug messages?
+Site Profile	In order to create a new scan, you need to have at least one completed site profile. The site profile defines what site or REST API you want DAST to scan. You can also define any URLs that you want to exclude and if the site requires authentication, you can provide the authentication details. 
+
+
+
+
+IaC (Infrastructure as Code) Scanning finds known security vulnerabilities in IaC configuration files. 
+
+IaC scans IaC configuration files, similar to a SAST scan, meaning that it scans the configuration files without actually running them. IaC Scanning supports configuration files for Terraform, Ansible, Kubernetes, etc.
+
+
+Use Cases	
+Managing IT infrastructure can be a tedious task, especially since it often involves manual processes that require configuring physical servers. Configurations have to be on the perfect setting for applications and operating systems or teams won’t be able to deploy. Looking for a simpler solution, teams began to create infrastructure setup as code to manage and provision infrastructure. 
+
+Infrastructure as Code (IaC) automates the provisioning of IT infrastructure by using configuration files. Automation leads to more efficient development, increased consistency, and faster time to market.
+
+Requirements	
+IaC Scanning runs in the test stage, which is available by default. If you redefine the stages in the .gitlab-ci.yml file, the test stage is required.
+
+We recommend a minimum of 4 GB RAM on runners executing IaC scanning to ensure consistent performance ensure consistent performance.
+
+To run IaC Scanning jobs, by default, you need GitLab Runner with the docker or kubernetes executor. If you’re using the shared runners on GitLab.com, this is enabled by default.
+
+Supported Languages and Frameworks	IaC Scanning supports a variety of IaC configuration files. The IaC security scanners also feature automatic language detection which works even for mixed-language projects. If any supported configuration files are detected in project source code we automatically run the appropriate IaC analyzers. 
+
+Learn more in the Gitlab Documentation.
+KICS	IaC Scanning uses the open-source tool KICS to perform static analysis on IaC files.
+
+
+include:
+   - template: Security/SAST-IaC.gitlab-ci.yml
+   
+   
+
+
+
+Sample Customizations	Why would I want to do that?
+Use a scanner based on a FIPS (Federal Information Processing Standards) image	FIPS are standards and guidelines for federal computer systems that are developed by the National Institute of Standards and Technology (NIST) in accordance with the Federal Information Security Management Act (FISMA) and approved by the Secretary of Commerce. These standards and guidelines are developed when there are no acceptable industry standards or solutions for a particular government requirement. 
+
+Although FIPS are developed for use by the federal government, many in the private sector voluntarily use these standards.
+
+
+There is one way to configure IaC Scanning:
+
+Set a global variable, SAST_IMAGE_SUFFIX to -fips in the .gitlab-ci.yml file:
+
+
+
+
+
+
+Dependency Scanning finds known security vulnerabilities in project dependencies and suggests alternative project dependencies that do not contain those same vulnerabilities. 
+
+Dependency Scanning only finds problems that have been discovered and catalogued by security experts in the GitLab Advisory Database.
+
+The scanner looks in the GitLab Advisory Database to see if a package and/or version of your dependencies has any documented vulnerabilities.
+Dependency Scanning does not look at source code, unlike Static Analysis and Secret Detection. 
+Dependency Scanning does not detect vulnerabilities that you introduced yourself (that's what Static Analysis is for!).
+The Dependency Scanner scans recursively, meaning that it looks at dependencies' dependencies.
+
+
+include:
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+  
+  
+Exclude analyzers	Dependency Scanning uses the Gemnasium analyzer by default but some languages have different analyzers. Similar to disabling analyzers in SAST and Secret Detection, if Gemnasium gives you the functionality that you need, you can exclude the other analyzers to optimize your scan.
+Automatic Remediation	When Dependency Scanning identifies a specific package version that has a known vulnerability, automatic remediation will automatically upgrade your dependency to a version without that vulnerability. However, you may not want the scanner to automatically make these updates and so you can toggle this feature on and off. Note that automatic remediation is situation-specific and may not always been an option. 
+Depth of directories to scan
+
+Allows you to define how many levels deep that the analyzer should search for supported files to scan. You may want to configure this feature to speed up analysis.
+
+
+
+
+Container Scanning finds known security vulnerabilities in packages in Docker images or Docker containers in the project's container registry.
+
+
+The scanner looks in the Vulnerabilities Database to see if a package in your Docker images has any documented vulnerabilities. These packages include:
+Default or Dockerfile-installed packages
+OS packages - View supported OS images by scanner
+Language packages (optionally)
+
+include:
+  -template: Security/Container-scanning.gitlab-ci.yml
+  
+Scan a remote image	You want to scan an image outside of your project's container registry, like an image on Docker Hub or somewhere else.
+Provide remote container registry credentials	If you need Container Scanning to log into a remote registry, you can provide the appropriate credentials.
+Enable language package scanning	Configure how and whether the scan reports findings related to programming languages (reminder: languages supported depend on the scanner used).
+
+
+
+Fuzz testing finds problems that QA teams can easily miss by throwing random inputs at your app in an effort to cause unexpected behavior.
+
+There are two ways of running Fuzz Testing:
+
+Coverage-Guided Fuzzing	, Web API Fuzzing
+
+Coverage-guided fuzzing sends random inputs to an instrumented version of your application in an effort to cause unexpected behavior. Such behavior indicates a bug that you should address.
+You can add coverage-guided fuzz testing to your pipelines. This helps you discover bugs and potential security issues that other QA processes may miss.
+
+Web API fuzzing performs fuzz testing of API operation parameters. Fuzz testing sets operation parameters to unexpected values in an effort to cause unexpected behavior and errors in the API backend.
+This helps you discover bugs and potential security issues that other QA processes may miss.
+
+include:
+  - template: Coverage-Fuzzing.gitlab-ci.yml
+  
+ 
+ 
+A corpus is the set of meaningful test cases that are generated while the fuzzer is running. Each meaningful test case produces new coverage in the tested program. It’s advised to re-use the corpus and pass it to subsequent runs.
+
+The corpus registry is a library of corpuses. Corpuses in a project’s registry are available to all jobs in that project. A project-wide registry is a more efficient way to manage corpuses than the default option of one corpus per job. 
+
+
+
+
+
+
+SECURITY POLICIES
+Application security policies are a set of guidelines and procedures that ensure the confidentiality, integrity, and availability of data in software applications. By implementing these policies, organizations can protect sensitive information and mitigate the risk of security breaches.
+
+
+
