@@ -1,0 +1,36 @@
+The GitLab Implementation course is designed to provide you with an overview of GitLab's architecture, components, installation methods, and various other soft skills around deploying GitLab in an organization. 
+At the end of this class, you should be able to discuss the various installation methods and their individual pros and cons. 
+You can explain what each GitLab Component is and its purpose. Finally, you should be able to install GitLab on an environment and secure it fully.
+
+
+services tier -> Rails + GitLab shell (web/api/ssh servers) , sidekiq(Background job processing)
+infrastructure tier -> consul(service directory) , prometheus+grafana(monitoring)
+Database tier -> Postgres (RDBMS) , Redis(Queuing , session state , caching)
+Gitaly tier -> Gitaly ( git repo storage)
+File storage tier -> object storage , NFS (file storage)
+ElasticSearch -> Full text search 
+
+Below are the listed components we'll be covering in this lesson:
+
+NGINX -> responsible for all requests
+GitLab Shell -> responsible that handles all ssh git operations like push authentication , authorization
+GitLab Pages -> serves static web pages
+GitLab Workhorse -> is the proxy between gitlab rails/puma and nginx , its purpose is to offload long running HTTPS Git operations from gitlab rails onto gitaly
+Sidekiq -> is gitlab background processor when operations such as moving renaming importing repos they take time gitlab rails/puma will schedule the operation with sidekiq who will execute in first in /last out 
+       sidekiq will retry a job 3 times before making it has dead , dead jobs are cause for concern you should monitor and alert on dead jobs
+Gitaly -> is responsible for storing and serving git objects , when gitlab is slowing down on operations gitaly is the place to look 
+Puma -> Gitlab rails is the main application code for gitlab , puma is web server that serves ruby code it communicates with almost all components in gitlab and viceversa , you will observe most log errors from this component
+Redis & Postgres -> redis is primarly used storage backup to sidekiq , it is used to store temporary data like token , sessions 	most of its data can be ephemeral 
+                   postgres is where all the persistant data is stored and kept , the data is encrypted using secret files  that rails/puma uses to read it
+				   
+
+
+Object Storage Introduction
+
+GitLab Omnibus comes out of the box with storing all files on the GitLab Instance. For Kubernetes/Cloud Native installations, this isn't possible and requires the implementation of Object Storage. GitLab supports most S3 Compatible Object Storage providers such as Amazon S3, Azure Blob, and Google Cloud Storage. It also supports Minio, which provides S3 Compatible storage On-Prem. The picture above illustrates what is stored in Object Storage by GitLab and what is not.
+
+supported by object storage -> ci artifacts , Attachments , LFS objects , LFS files , External diffs , Packages , container registry , gitlab pages, Terraform state , Backup archives , File uploads
+not supported by object storage -> Database data , Repository files , Redis data
+
+
+
