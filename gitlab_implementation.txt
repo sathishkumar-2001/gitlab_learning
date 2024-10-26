@@ -32,5 +32,213 @@ GitLab Omnibus comes out of the box with storing all files on the GitLab Instanc
 supported by object storage -> ci artifacts , Attachments , LFS objects , LFS files , External diffs , Packages , container registry , gitlab pages, Terraform state , Backup archives , File uploads
 not supported by object storage -> Database data , Repository files , Redis data
 
+The GitLab Omnibus Package contains everything necessary to install GitLab on a VM. For example, it comes bundled with Postgres and Redis. The versions of these components have all been tested to work together and are supported by GitLab Support. When you install this package, it installs everything into /opt/gitlab. The Omnibus package is often bundled as a .deb or .rpm package.
+gitlab-ctl CLI Tool
 
+
+Command	Description
+gitlab-ctl help	Prints a help message detailing all gitlab-ctl commands.
+gitlab-ctl reconfigure	Initiates a Chef run to reconfigure the GitLab instance inline with what the gitlab.rb file states.
+gitlab-ctl stop {serviceName}	Forces a stop of that specific service.
+gitlab-ct start {serviceName}	Forces a start of that specific service.
+gitlab-ctl kill {serviceName}	Sends that specific service a KILL.
+gitlab-ctl restart {serviceName}	Restarts the specified service.
+gitlab-ctl status	Gives a list of all services and their status.
+gitlab-ctl status {serviceName}	Gives the status to a specific service.
+gitlab-ctl tail	Begins a watch of the logs for all services.
+gitlab-ctl tail {serviceName}	Begins a watch of the logs for a specific service.
+
+Below is an example command to start the GitLab Omnibux Container on a Docker host. This command specifies the domain, ports, container name, and persistent storage volumes.
+
+sudo docker run --detach \
+  --hostname gitlab.example.com \
+  --env GITLAB_OMNIBUS_CONFIG="external_url 'http://gitlab.example.com'" \
+  --publish 443:443 --publish 80:80 --publish 22:22 \
+  --name gitlab \
+  --restart always \
+  --volume $GITLAB_HOME/config:/etc/gitlab \
+  --volume $GITLAB_HOME/logs:/var/log/gitlab \
+  --volume $GITLAB_HOME/data:/var/opt/gitlab \
+  --shm-size 256m \
+  gitlab/gitlab-ee:<version>-ee.0
+
+
+
+Cloud Native Hybrid Introduction
+The GitLab Cloud Native Hybrid (GitLab CNH) is the configuration used to deploy GitLab on Kubernetes. Because GitLab is a platform on which teams and infrastructure depend, it's important that it's as stable as possible. The GitLab Engineering Team designed the Cloud Native Hybrid method to meet these goals and considerations.
+
+GitLab CNG shares very little with the other installation methods. It is designed to take full advantage of Kubernetes. This means that all logs push to stdout, all GitLab components are broken out into their own Container Images for scalability, and all HTTP/HTTPS routing is handled via an Ingress Router. For SSH Access, Port 22 is exposed directly. Most importantly, all of the containers designed by GitLab follow container best practices, whereas GitLab Omnibus Container does not.
+
+What is "Cloud Native Hybrid"
+The biggest difference between GitLab's Cloud Native Hybrid installation and a normal Kubernetes deployment is that GitLab CNG moves all persistent storage to VMs. That means Redis, Gitaly, and Postgres do not sit on Kubernetes but on VMs outside of Kubernetes. This is done for performance and reliability concerns. While some organizations have successfully run Redis and Postgres on Kubernetes, GitLab, through testing, trial, and error, has found that our usage of these databases taxes them heavier than other applications. This means they can become unreliable. For Gitaly, we've seen read/write issues on Kubernetes due to latency and cloud storage performance.
+
+It's worth reiterating that GitLab is often deployed as a platform for organizations. This means they build things on top of it or use it. For example, an organization stores all of its Terraform Infrastructure code in GitLab and uses GitLab CI/CD to deploy it. Any outage of GitLab can result in a cascading failure due to the inability to deploy/restore/fix/rollback infrastructure elsewhere. This means GitLab should be treated as a critical path and be as stable as possible.
+
+How to Install GitLab Cloud Native Hybrid
+The first step in deploying a GitLab CNG Instance is to grab a cup of coffee, take a deep breath, and determine if a Kubernetes deployment is necessary for your organization. If it is, then you need to plan out the installation in accordance with the reference architectures (covered later).
+
+You will need to prepare to host the stateful components of GitLab. Many customers can shortcut this by simply utilizing cloud-managed versions of Redis and Postgres. However, Gitaly will still need to be hosted on VMs. You will need to plan to procure and manage these VMs. If you plan to do a high-available implementation of GitLab you will need multiple VMs for each of those components, as well as their supporting replication tools. You can use the GitLab Environment Toolkit to provision multiple VMs with just the components necessary to run Gitaly, Postgres, and Redis.
+
+Next, you will need to prepare to install the GitLab Helm Chart. This begins by pulling down the chart, generating a default values file, and configuring it. While GitLab Omnibus utilizes a gitlab.rb file for configuration, the Helm charts follow the conventional standard of a Helm Values file.
+
+We will not cover the details of installing and configuring GitLab CNG in this course. If you are interested in this, it's advised that you speak with GitLab Professional Services. GitLab CNG is a very complicated implementation.
+
+
+
+
+
+GitLab Environment Toolkit
+Whether you're installing GitLab on Kubernetes or machines, the installation process for large GitLab instances can be large and cumbersome. When installing GitLab on machines, you may need to deploy, provision, and test 10+ machines. This is more complicated as some components need to be provisioned before others. This process is simplified with the GitLab Environment Toolkit, also referred to as GET. Below is a diagram of the GitLab Environment Toolkit.
+
+
+
+GitLab Environment Toolkit
+Whether you're installing GitLab on Kubernetes or machines, the installation process for large GitLab instances can be large and cumbersome. When installing GitLab on machines, you may need to deploy, provision, and test 10+ machines. This is more complicated as some components need to be provisioned before others. This process is simplified with the GitLab Environment Toolkit, also referred to as GET. Below is a diagram of the GitLab Environment Toolkit.
+
+
+What does GET do?
+As the diagram above shows, GET exists as a layer of Ansible and Terraform used to provision bare-metal and cloud resources. GitLab Omnibus is designed to be an all-in-one package for all GitLab Components, however you can use cloud resources to handle some of those Omnibus components. Replacing things like Nginx with an AWS ELB is possible, as is replacing Redis with ElastiCache. However, GitLab Omnibus and Charts do not contain the capability to provision these resources. This is where GET comes in; it exists as a wrapper around Omnibus and Charts to add cloud resource provisioning.
+
+Historically, before GET, many GitLab Users and Staff Members generated their own Ansible and Terraform to provision cloud resources and deploy GitLab using cloud resources. This resulted in a mixture of installation patterns and processes. Much of the knowledge from this time is now included inside of GET.
+
+GET leverages Terraform to provision all necessary cloud resources, and then once provisioned, GET executes Ansible against any virtual machines to install and configure GitLab Omnibus. Each virtual machine will have a GitLab.rb (discussed in detail later) configuration file on the virtual machine. Then Ansible will leverage this GitLab.rb and Chef on the machine to provision it with the Omnibus Package.
+
+When the target is a Cloud Native Hybrid environment, instead of virtual machines and Omnibus. GET will utilize the Helm Chart to provision the required cloud resources. In this scenario, the GitLab Chart values yaml file will be configured by GET. Then, GET will provision the cloud resources and apply the GitLab Chart to your existing Kubernetes instance. GET will not, however, set up Kubernetes, which is outside the scope of GET.
+
+Closing
+The GitLab Environment Toolkit is built to make some of the most complicated GitLab installations simple. With it, GEO and HA installations are much easier and more supported. However, because of the goal of making complicated installations simple, GET is very opinionated. If you have a specific environment, need or quirky installation, GET may need to be customized to match your needs. You can read the full GET Documentation in its GitLab Project located here.
+
+
+
+
+GitLab Geo vs GitLab HA
+GitLab Geo and GitLab HA complement and compete with each other. GitLab Geo's primary purpose is to have two or more GitLab instances in multiple geographic locations so that, in the event of a failure, you can switch between the locations or reduce latency to users across the globe. GitLab Geo does not add capacity. GitLab HA enables HA of all the GitLab Services/Components in a single geographic location. Due to latency, a GitLab HA instance should not be in differing regions.
+
+
+
+
+GitLab HA
+
+
+While GitLab Geo allows disaster recovery and performance across the globe, GitLab HA will enable you to have a GitLab instance that scales to meet the concurrent user demands and ensures that if any GitLab service/component fails, the instance remains online. You've seen the picture above in the components section of this course. We'll refer to it again.
+
+Each small blue block inside this image is a running instance of that GitLab component. In the case of Sidekiq and Rails/GitLab Shell, the components will scale horizontally to handle the load. They can also shrink when that load goes away. Postgres, Redis, and Gitaly require manual intervention to scale and should be considered static infrastructure. A healthy GitLab HA cluster will have a minimum of three instances of each.
+
+Because Gitaly, Postgres, and Redis are static while GitLab Rails is not, there exists a scenario in which GitLab Rails and Sidekiq scale up to meet demand, causing a large demand on the Gitaly, Postgres, and Redis instances. Capacity plan accordingly.
+
+
+
+GitLab Geo, GitLab HA - Which should you choose?
+Many customers will ask whether to leverage GitLab HA or GitLab Geo, or they will state they need GitLab HA because it's marketed as Highly Available. Care should be taken to understand a customer's specific demands, use cases, and circumstances to determine which to choose or when to choose both. Many customers ask for GitLab HA because they don't want prolonged downtime. They believe GitLab HA will cure that problem when it is a complicated implementation that can result in longer downtime and maintenance periods due to its complexity. Some organizations don't have the experience or staff to wrangle such complexity.
+
+A properly set up GitLab Geo instance with automation can result in a secondary promotion to a primary in minutes. There is manual intervention, and there will be downtime during the switch. However, for some organizations, 10-20 minute downtime is preferred over additional staff/resources/time to manage GitLab HA.
+
+There is a careful balance when choosing which path to take. GitLab Geo brings low latency to other regions, a complete backup of all data on the primary, and a 10-20 minute fail-over in the event of an issue. GitLab HA brings redundancy to each service/component, reducing the risk of downtime. It also brings additional capacity for high-traffic instances and zero-downtime upgrades and maintenance periods.
+
+GitLab Geo requires a manual or semi-automated failover process. It erases a former primary and brings it back as a secondary to sync before promoting it to primary again. It does not have redundancy at the component level.
+
+GitLab HA is complex and requires triplicates of all components. If you're not using Cloud-Managed Postgres/Redis instances, you have to manage the database and its replication settings yourself. If a GitLab HA cluster goes offline, it takes more time to diagnose and bring it online.
+
+
+
+
+
+GitLab.com's architecture is important to be aware of for three reasons. First, customers commonly ask how it's built when referencing how to build their GitLab instance. Secondly, because it's the largest GitLab instance in the world, trade-offs and interesting design decisions are being made due to the scale. Third, and perhaps most important, because most engineering decisions and work in GitLab.com will filter down to the GitLab HA, GitLab Omnibus, and GitLab CNH designs. GitLab, as a company, dogfoods its own engineering and architectural decisions.
+
+
+
+
+
+which gitlab architecture we can choose
+
+scenario 1 : 1200 users , no k8s experience , want HA , supports production , 1 gitlab admin , using ci/cd for prod application -> gilab omnibus vm
+
+scenario 2 : 3500 users , no k8s experience , don't want HA  , supportes production , 3 gitlab admin , using ci/cd for prod application -> gitlab HA installation using GET 
+
+scenario 3 : 3500 users , k8s certified , dont' want HA , supportes production , 3 gitlab admin , using ci/cd for prod -> gilab cloud native k8s installation
+
+	
+	
+Gitlab installation 
+you will need an Ubuntu Environment or Virtual Machine with 8GB of memory and two vCPUs.
+
+login into vm
+
+sudo apt update
+sudo apt-get install -y postfix
+sudo apt-get install -y curl ca-certificates tzdata perl
+curl <a href="https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh" class="redactor-autoparser-object">https://packages.gitlab.com/in...</a> | sudo bash
+sudo EXTERNAL_URL="http://ip-address" GITLAB_ROOT_PASSWORD="somethingYouChoose" apt-get install gitlab-ee
+
+The username is root , and the password is the GITLAB_ROOT_PASSWORD variable we set in the previous step.
+
+
+Configuration Lab
+The two areas of configuring GitLab are in the Admin Panel of your GitLab Instance. The second area is the gitlab.rb file on GitLab's server. Some configuration settings exist in both places; however, the Admin Panel should be considered where most settings dictate how GitLab operates. In contrast, the gitlab.rb file should be considered setting the infrastructure settings so that GitLab can operate.
+
+Once logged in, you'll want to run the command ls /etc/gitlab/ to ensure that we can access the GitLab.rb file.
+Reconfigure GitLab
+With the GitLab.rb file having been edited and saved, we now have to apply those changes to GitLab. This is done by running the gitlab-ctl reconfigure command. We'll run that command now to change the cluster. A successful reconfigure execution will look like this picture.
+
+
+
+Break-Fix Lab
+
+Disable Gitaly
+Now, we're going to run the gitlab-ctl status command to verify that all services are up. Once we've verified all services are online, we will turn Gitaly off. We do this with the command gitlab-ctl stop gitaly. With Gitaly stopped, your status should look like the picture to the side.
+
+Viewing Failures
+When you visit any GitLab Project page, you will see a 500 HTTP Error page. However, the GitLab Admin panel will still be accessible; go ahead and access it now. We'll want to navigate on the left  Overview and then Gitaly Servers. You can also access this page directly by visiting http:///admin/gitaly_servers. Once there, you will see the screenshot on the left. Note that Gitaly's Server Version and Git Version are blank. This is one way to identify that GitLab Rails cannot connect to Gitaly. Even if Gitaly is online, but there is a network issue, you will see this behavior.
+
+Restore Gitaly
+We're going to restore Gitaly. We do this by starting it with the command gitlab-ctl start gitaly. This will restart and reload Gitaly. After a few moments, it should come online; you can verify this with gitlab-ctl status.
+
+
+Disable GitLab Rails
+Let's run gitlab-ctl status to verify all services are up, then we're going to turn off Puma. We can turn off Puma by running gitlab-ctl stop puma and observe it is offline with gitlab-ctl status. Puma is the rails server that serves GitLab Rails.
+
+Viewing Failures (cont)
+The next place to view failures is the GitLab logs. In your terminal, run the command gitlab-ctl tail and observe what appears. Some logs will be INFO errors and not a concern. However, you should see a connection from GitLab Workhorse to GitLab Rails that is failing, according to the error log. Pictured beside is an example of that.
+
+Observe Restoration
+While leaving your web browser open with the "Waiting for GitLab to boot" page up. Also, open your terminal and restart GitLab Rails by running the command gitlab-ctl start puma. Your web browser will refresh in a few moments, and GitLab will be presented. Be patient; this can take a few minutes.
+
+
+Backup Restore Lab
+Begin GitLab Backup
+The first step in a GitLab Backup is to begin the backup process. This is done using the gitlab-backup create command. This command also takes an optional environment variable of SKIP=. With the SKIP variable, you can skip backing up specific items. This is useful if you're using object storage. Go ahead and run the command gitlab-backup create now. Depending on the size of your instance, this can take some time; seeing Database errors is normal also.
+
+
+Backup Secrets and Config
+Once the backup file has been created, it will be stored on your local file system. The next step in this process is to copy down the gitlab.rb and gitlab-secrets.json files. The GitLab database is encrypted, and the secrets file contains all the keys to unencrypt it. You can view the folder they reside in with the command ls /etc/gitlab/. You can pull these files down locally with the command scp username@remote:/etc/gitlab/* ~/. Go ahead and do that now to back up those files.
+
+
+Begin GitLab Restore
+With those files safely copied, if you were to restore to a different server, you would need to place those files in /etc/gitlab on the new server. We're going to begin this backup on our server. The first step would be to load the backup archive to the path /var/opt/gitlab/backups/ , but we already have it there. Let's see what is in that folder by running the command ls /var/opt/gitlab/backups/ You should see a filename. Copy this filename down; ours is '1721104561_2024_07_16_17.1.1-ee_gitlab_backup.tar'
+
+Begin GitLab Restore (cont.)
+Now that we've moved the secrets, config, and archive onto the server. (They already were there.) We can begin the restoration process. We start this by turning off GitLab Rails and Sidekiq. Run the command gitlab-ctl stop puma and gitlab-ctl stop sidekiq. Once stopped, we'll begin the restore by running the command gitlab-backup restore BACKUP=1721104561_2024_07_16_17.1.1-ee. The BACKUP value tells GitLab which archive to use, and we've chosen the one we saved previously.
+
+
+
+
+
+GitLab Runner Overview
+
+The GitLab Runner is the component of GitLab that handles executing CI/CD Jobs. The Runner is a single executable binary with an accompanying configuration file. Once appropriately configured and connected, the Runner checks in with GitLab every few seconds to determine if any work needs to be performed. If so, it does it. Otherwise, it sleeps until the next check-in.
+
+This flow means that all connections to GitLab from the Runner are outbound connections and not inbound to the Runner. Combining this functionality with the Runner being a single binary means you can run a GitLab Runner almost anywhere. Enterprise customers often install the Runner on Virtual Machines or Kubernetes Clusters for a production installation. However, many folks have found unique and creative places to install the GitLab Runner. These include satellites, kitchen appliances, IoT devices, and more. This combination of GitLab and a Runner that can be installed anywhere means you can write a CI/CD Pipeline and execute it almost anywhere, automating anything.
+
+
+GitLab Runner Installation
+
+cul -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
+
+sudo apt-get install gitlab-runner
+
+Registering the Runner: With the runner successfully installed, we need to connect our runner to our GitLab instance. This is commonly referred to as "registering" the runner. Go ahead and login to your GitLab instance as an administrator. On the bottom left, click Admin Area. Once there, in the left navigation, click "CI/CD" and then "Runners." This page is the main dashboard for your GitLab Runners. In the top-right, click "New Instance Runner." You will then see a page pictured below.
+
+Registering the Runner (cont.): On this page, you will see the option to add tags to this runner or mark it as untagged. Check the "Run untagged jobs" box. Next, you'll be given the option to give it a description. You can enter whatever you want here. Then press "Create Runner." This will provide us with the register command with the necessary token and URL. Go ahead and paste that into your terminal.
+
+Configuring the Runner Executor: Once you enter the registration command, you will be asked a series of questions. The URL should be pre-filled out for you, the name is pulled from your hostname, and then you will be asked what executor you would like. Select "shell" for the executor. Once completed, you should see a message like below. You should now run the command gitlab-runner run. Now, you should see your runner appear on the runner dashboard.
 
