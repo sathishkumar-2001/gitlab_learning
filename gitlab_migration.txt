@@ -1,0 +1,33 @@
+GitLab Migration Services
+
+
+The purpose of GitLab migration tools and capabilities is to seamlessly transition a customer from one Git instance (Source) to a GitLab instance (Destination). The source Git instance can be any of the following: GitLab, GitHub, BitBucket, Gitea, or Basic Git. The features for migration vary based on the source instance and our access to it.
+
+Through this class, you'll learn the different methods for migrating repositories, their pros and cons, and when to utilize each method. You will also learn about things to look out for as you plan and conduct a migration. While GitLab provides tooling to migrate repositories, some things we don't migrate, and you must migrate those yourself. We'll discuss in detail what these things are and what you should expect.
+
+Methods of Migrating
+There are multiple methods of migrating repositories. These methods vary based on what Git tooling you're using and transferring to/from. If you are moving from GitLab to a GitLab instance, you have the option of utilizing the following:
+
+Congregate
+Backup/Restore of an entire instance.
+GEO Transfer of an entire instance.
+File-Based Export/Import
+Git Push to a new Remote.
+
+If you are migrating from an alternate Git tool, such as BitBucket or GitHub, you have a different set of choices. Those choices are:
+
+Congregate
+GitLab Repository Importer
+Git Push to a new Remote.
+
+Congregate
+Congregate is a tool built by GitLab. It is covered under the GitLab EE license and is made available to all licensed users of GitLab. It is also made source available on GitLab. As a tool, Congregate is used to expedite, automate, and improve the existing GitLab import process. It sits atop the GitLab repository Importer tool, adding functionality and safety.
+
+In a later section, we will cover Congregate in depth, including how to set It up, use it, and succeed with it.
+
+
+
+Self Migration
+
+On a self-hosted GitLab instance the first thing we need to do is enable imports. We'll do that by navigating the import section of the GitLab Admin Area. This is done by going Admin Area -> Settings -> General -> Import and Export Settings.
+
