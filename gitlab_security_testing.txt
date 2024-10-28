@@ -247,5 +247,10 @@ The corpus registry is a library of corpuses. Corpuses in a project’s registry
 SECURITY POLICIES
 Application security policies are a set of guidelines and procedures that ensure the confidentiality, integrity, and availability of data in software applications. By implementing these policies, organizations can protect sensitive information and mitigate the risk of security breaches.
 
+Scan Execution Policies
+Group, subgroup, or project owners can use scan execution policies to require that security scans run on a specified schedule or with the project pipeline. The security scan runs with multiple project pipelines if you define the policy at a group or subgroup level. 
 
+If you create a policy at the group level, it applies to every child project or subgroup. You cannot edit a group-level policy from a child project or subgroup.
+
+Both Scan Execution and Scan Results policies are enabled and configured through the GitLab Project GUI:
 
