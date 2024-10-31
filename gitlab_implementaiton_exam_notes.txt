@@ -1,0 +1,70 @@
+For this exam, you will complete the Implementation Workshop and implement a GitLab system.
+
+Important Notes:
+
+For all steps that involve naming items, copy and paste the name from these instructions so the capitalization, spelling, and spaces are exactly as written here. Tasks will fail if the items you create are not named exactly as described.
+
+Exam Instructions
+
+Follow all steps in the workshop to Implement a GitLab system. Please be sure to save the following information onto a notepad or word document as you will need it later:
+
+GitLab URL you created
+Admin Username
+Admin Password
+Once you have completed the workshop, you will follow the steps in the next section to submit it for grading!
+
+A GitLab team member will review and grade your work in the Demo Cloud using the project link you provide. You will receive your certification results within 14 business days.
+
+
+/home/ec2-user/gitlab-environment-toolkit/keys
+
+
+
+m5.xlarge
+m5.xlarge
+m5.xlarge
+c5.xlarge
+c5.large
+m5.large
+m5.large
+
+
+
+
+PLAY RECAP ****************************************************************************************************************************************************************************************************
+gitlab-sathishkumar-3k-consul-1 : ok=42   changed=15   unreachable=0    failed=0    skipped=167  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-consul-2 : ok=36   changed=17   unreachable=0    failed=0    skipped=153  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-consul-3 : ok=36   changed=17   unreachable=0    failed=0    skipped=153  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-gitlab-rails-1 : ok=29   changed=13   unreachable=0    failed=1    skipped=165  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-gitlab-rails-2 : ok=28   changed=12   unreachable=0    failed=0    skipped=167  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-gitlab-rails-3 : ok=28   changed=12   unreachable=0    failed=0    skipped=172  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-haproxy-external-1 : ok=45   changed=22   unreachable=0    failed=0    skipped=190  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-monitor-1 : ok=25   changed=11   unreachable=0    failed=0    skipped=77   rescued=0    ignored=0   
+gitlab-sathishkumar-3k-pgbouncer-1 : ok=39   changed=19   unreachable=0    failed=0    skipped=153  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-pgbouncer-2 : ok=39   changed=19   unreachable=0    failed=0    skipped=163  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-pgbouncer-3 : ok=39   changed=19   unreachable=0    failed=0    skipped=153  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-postgres-2 : ok=37   changed=16   unreachable=0    failed=0    skipped=165  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-praefect-1 : ok=37   changed=17   unreachable=0    failed=0    skipped=169  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-praefect-2 : ok=35   changed=15   unreachable=0    failed=0    skipped=161  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-praefect-3 : ok=35   changed=15   unreachable=0    failed=0    skipped=161  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-praefect-postgres-1 : ok=34   changed=17   unreachable=0    failed=0    skipped=151  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-redis-1 : ok=36   changed=16   unreachable=0    failed=0    skipped=163  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-redis-2 : ok=36   changed=16   unreachable=0    failed=0    skipped=153  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-redis-3 : ok=36   changed=16   unreachable=0    failed=0    skipped=153  rescued=0    ignored=0   
+gitlab-sathishkumar-3k-sidekiq-1 : ok=25   changed=11   unreachable=0    failed=0    skipped=77   rescued=0    ignored=0   
+gitlab-sathishkumar-3k-sidekiq-2 : ok=25   changed=11   unreachable=0    failed=0    skipped=77   rescued=0    ignored=0   
+gitlab-sathishkumar-3k-sidekiq-3 : ok=25   changed=11   unreachable=0    failed=0    skipped=77   rescued=0    ignored=0   
+gitlab-sathishkumar-3k-sidekiq-4 : ok=25   changed=11   unreachable=0    failed=0    skipped=77   rescued=0    ignored=0   
+
+
+
+
+i-053d1a4ee062e4757
+
+
+
+sudo EXTERNAL_URL="http://" http://13.126.60.122/ apt-get install gitlab-ee
+
+
+
+so totally we need 32 instances 
