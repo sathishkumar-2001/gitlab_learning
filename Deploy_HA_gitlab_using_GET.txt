@@ -1,0 +1,848 @@
+Deploying GitLab Reference Architecture on AWS with GET
+
+
+IMPORTANT: This workshop assumes that you are using GET 2.0.1 or newer.
+
+Workshop pre-work
+This should be completed before the SKO breakout session
+If you are a GitLab partner, you must use your own cloud environment for this workshop.
+If you are an internal GitLab Teammember (you have a @gitlab.com email address), be sure to use GitLab Sandbox Cloud to create an AWS account for you.
+GET uses Terraform to provision Infrastructure and Ansible to manage GitLab configuration;
+It is possible to use Terraform and Ansible installed locally; However, during this session, to avoid potential environmental issues, we are going to use Toolkit's image. To do so we need to prepare our environment by installing Docker and Git. Our suggestion is to deploy an EC2 instance in the region you have chosen to run this workshop. The instance OS is a suggestion but the Docker installation might be different if you pick a different OS. Check the official Docker documentation.
+
+The instructions that follow are prescriptive of an amd64 Mac.
+
+
+
+        
+      
+
+
+ Access the AWS Management Console
+
+ Choose a region and add it to the next line (e.g. us-east-2):
+   
+ AWS Region:ap-south-1   
+        
+ Create an AWS Access Key. Save these keys locally: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to later use;   
+        
+ Choose a prefix (gitlab-YOURGITLABHANDLE-3k for example): gitlab-sathishkumar-3k   
+        T
+ Access EC2
+
+ Create a Key Pair   
+
+ Allocate an Elastic IP and add it and the Allocation ID to the lines below:   
+
+ Elastic IP: 13.126.60.122   
+
+ Allocation ID: eipalloc-0c580b3bbd19f549d   
+        
+ Launch a c5.large instance with Amazon Linux 2 AMI (HVM) 64-bit (x86) selecting the key pair created previously. Note: the costs of deploying GitLab in this workshop are the responsibility of the workshop student or student's company.
+   
+   
+ Make sure you have Security group for SSH TCP 22 0.0.0.0/0
+   
+
+ Access your instance by selecting from the Instances listing your Instance ID, followed by selecting Connect, and selecting Connect again under the EC2 Instance Connect tab   
+        
+ Install Docker by running in the terminal you connected to the following commands:
+   
+      
+ sudo yum update -y
+   
+ sudo yum install -y docker
+   
+ sudo systemctl enable docker
+
+ sudo systemctl start docker
+   
+ sudo usermod -aG docker ec2-user
+   
+  
+ Run sudo yum install -y git
+   
+ On the same instance terminal run the next steps:
+   
+
+ Run cd /home/ec2-user
+   
+
+ Run git clone https://gitlab.com/gitlab-org/gitlab-environment-toolkit.git to clone GET   
+       
+ Run sudo docker pull registry.gitlab.com/gitlab-org/gitlab-environment-toolkit:latest to pull the Toolkit's image
+
+If you got Getting permission denied while trying to connect to the Docker daemon socket just restart the instance, if the issue persist you can run sudo chmod 666 /var/run/docker.sock ssh on it again.
+
+   
+ Run cd gitlab-environment-toolkit to access the keys directory   
+        
+
+ Run ssh-keygen -t rsa -b 2048 -f keys/id_rsa leaving the passphrase empty, and completing the ssh key creation (these will be used on the gitlab instance)   
+      
+
+
+Workshop work
+During the session
+
+Terraform Configuration
+
+
+
+
+ Configure GET to deploy the 3K reference architecture. Open a terminal and run cd /home/ec2-user/gitlab-environment-toolkit cloned previously, run the steps that follow:
+   
+ run mkdir terraform/environments/3k
+   
+
+ run cd terraform/environments/3k
+   
+      
+
+ run touch variables.tf main.tf environment.tf
+   
+        
+
+The directory structure should look like below:
+
+gitlab-environment-toolkit
+    └── terraform
+        └── environments
+                └── 3k
+                    ├── variables.tf
+                    └── main.tf
+                    └── environment.tf
+
+
+Following the documentation we are going to edit the 3 files created in the previous step:
+
+
+
+
+ In the variables.tf file replace the variables accordingly.
+   
+       
+
+ Replace prefix value   
+        
+
+ Replace region value   
+       
+ Replace external_ip_allocation
+   
+        
+ Replace ssh_public_key_file with your key location (if the pre-work instructions were followed, the location is "../../../keys/id_rsa.pub")   
+        
+Both the public key and the allocation ID were provisioned as part of workshop pre-work (beginning of this tutorial) as well as the prefix. This prefix variable later is going to be used on our Ansible configuration. Your variables.tf file should look like the following:
+
+variable "prefix" {
+    default = "gitlab-afonseca-3k"
+}
+
+variable "region" {
+    default = "eu-central-1"
+}
+
+variable "ssh_public_key_file" {
+    default = "../../../keys/id_rsa.pub"
+}
+
+# This can be found in the Elastic IPs section
+variable "external_ip_allocation" {
+    default = "eipalloc-08d875f994cb379bb" 
+}
+
+
+We use local storage of the Terraform state for this workshop. Alternatively, you can store it in a previously provisioned bucket.
+
+
+
+
+ The file main.tf should look like below:    
+
+
+
+
+terraform {
+    required_providers {
+        aws = {
+        source = "hashicorp/aws"
+        }
+    }
+}
+
+# Configure the AWS Provider
+provider "aws" {
+    region = var.region
+}
+
+
+Edit the environment.tf file to configure Terraform with the target Reference Architecture. During this workshop, we are going to use created network mode with 3 subnets. GET is quite flexible and the network configuration can be customized to your needs. For more information check the Advanced Network documentation.
+
+
+
+
+ For the 3K Architecture this file should look like follows:   
+        
+module "gitlab_ref_arch_aws" {
+    source = "../../modules/gitlab_ref_arch_aws"
+
+    prefix              = var.prefix
+    ssh_public_key      = file(var.ssh_public_key_file)
+
+    # using network mode create with 3 subnets
+    create_network = true
+    subnet_pub_count = 3
+
+    # External load balancer node
+    haproxy_external_node_count = 1
+    haproxy_external_instance_type = "c5.large"
+
+    # Redis
+    redis_node_count = 3
+    redis_instance_type = "m5.large"
+    
+    # Consul + Sentinel
+    consul_node_count = 3
+    consul_instance_type = "c5.large"
+
+    # Postgres
+    postgres_node_count = 3
+    postgres_instance_type = "m5.large"
+
+    # Pgbouncer
+    pgbouncer_node_count = 3
+    pgbouncer_instance_type = "c5.large"
+
+    # External Load Balancer
+    haproxy_external_elastic_ip_allocation_ids = [var.external_ip_allocation]
+    
+    # Internal Load balancer node
+    haproxy_internal_node_count = 1
+    haproxy_internal_instance_type = "c5.large"
+    
+    # gitaly
+    gitaly_node_count = 3
+    gitaly_instance_type = "m5.xlarge"
+    
+    # praefect
+    praefect_node_count = 3
+    praefect_instance_type = "c5.large"
+
+    # praefect postgres
+    praefect_postgres_node_count = 1
+    praefect_postgres_instance_type = "c5.large"
+
+    # nfs
+    gitlab_nfs_node_count = 1
+    gitlab_nfs_instance_type = "c5.xlarge"
+
+    #rails   
+    gitlab_rails_node_count = 3
+    gitlab_rails_instance_type = "c5.2xlarge"
+    
+    #grafana and prometheus
+    monitor_node_count = 1
+    monitor_instance_type = "c5.large"
+    
+    #sidekiq
+    sidekiq_node_count = 4
+    sidekiq_instance_type = "m5.large"
+}
+
+
+
+Ansible configuration
+Now let's configure Ansible, first creating the required directory structure and files.
+
+
+
+
+ In a terminal from the directory gitlab-environment-toolkit execute the following steps:
+   
+
+ Run mkdir -p ansible/environments/3k/inventory
+   
+        
+ Run cd ansible/environments/3k/inventory
+   
+        
+
+ Run touch 3k.aws_ec2.yml vars.yml
+   
+        
+
+
+The directory structure should look like below:
+
+gitlab-environment-toolkit
+    └── ansible
+        └── environments
+            └── 3k
+                └── inventory
+                      ├── 3k.aws_ec2.yml
+                      └── vars.yaml 
+
+
+
+
+
+
+ Now lets configure the AWS Dynamic Inventory plugin. Edit 3k.aws_ec2.yml to look similar to the following:
+   
+      
+ Replace region accordingly   
+       
+
+ Replace tag:gitlab_node_prefix: accordingly to your prefix
+   
+       
+
+ Don't change ansible_host. The value public_ip_address is the correct value.   
+      
+
+
+plugin: aws_ec2
+regions:
+  - eu-central-1
+filters:
+  tag:gitlab_node_prefix: gitlab-afonseca-3k # Same prefix set in Terraform
+keyed_groups:
+  - key: tags.gitlab_node_type
+    separator: ''
+  - key: tags.gitlab_node_level
+    separator: ''
+hostnames:
+  # List host by name instead of the default public ip
+  - tag:Name
+compose:
+  # Use the public IP address to connect to the host
+  # (note: this does not modify inventory_hostname, which is set via I(hostnames))
+  ansible_host: public_ip_address
+
+
+
+Now we need to provide the variables to the Ansible playbooks, for simplicity, we are going to use just one Password across the application, but this can be configured as per your needs. We are also avoiding passwords in the playbooks using environment variables through lookup('env',...) that pulls the password for us. In the next section, the variable GITLAB_PASSWORD will be defined.
+
+
+
+ Set the variables accordingly to produce a vars.yml similar to the following
+   
+       
+
+ Replace aws_region
+   
+     
+ Replace prefix
+   
+    
+ Replace external_url with the allocated elastic ip   
+        
+
+ Uncomment and add your gitlab_license_file if it's available   
+        
+
+all:
+  vars:
+    # Ansible Settings
+    ansible_user: ubuntu
+    ansible_ssh_private_key_file: "../keys/id_rsa"
+
+    # Cloud Settings, available options: gcp, aws, azure
+    cloud_provider: "aws"
+
+    # AWS only settings
+    aws_region: "eu-central-1"
+
+    # General Settings
+    prefix: "gitlab-afonseca-3k"
+    external_url: "http://3.64.162.121"
+    # gitlab_license_file: "../../../sensitive/GitLabBV.gitlab-license"
+
+    # Component Settings
+    patroni_remove_data_directory_on_rewind_failure: false
+    patroni_remove_data_directory_on_diverged_timelines: false
+
+    # Passwords / Secrets
+    gitlab_root_password: "{{ lookup('env', 'GITLAB_PASSWORD') }}"
+    grafana_password: "{{ lookup('env', 'GITLAB_PASSWORD') }}"
+    postgres_password: "{{ lookup('env', 'GITLAB_PASSWORD') }}"
+    patroni_password: "{{ lookup('env', 'GITLAB_PASSWORD') }}"
+    consul_database_password: "{{ lookup('env', 'GITLAB_PASSWORD') }}"
+    gitaly_token: "{{ lookup('env', 'GITLAB_PASSWORD') }}"
+    pgbouncer_password: "{{ lookup('env', 'GITLAB_PASSWORD') }}"
+    redis_password: "{{ lookup('env', 'GITLAB_PASSWORD') }}"
+    praefect_external_token: "{{ lookup('env', 'GITLAB_PASSWORD') }}"
+    praefect_internal_token: "{{ lookup('env', 'GITLAB_PASSWORD') }}"
+    praefect_postgres_password: "{{ lookup('env', 'GITLAB_PASSWORD') }}"
+
+
+
+Running Terraform and Ansible from Toolkit's Container
+
+
+
+
+ Open a terminal and set the following environment variables for the Terraform module: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and GITLAB_PASSWORD, using for the GitLab root password something like 3XKq6Bu3QnEze2uW.
+   
+        
+ Run, export AWS_ACCESS_KEY_ID=<AWS_ACCESS_KEY_ID>
+   
+       
+
+ Run, export AWS_SECRET_ACCESS_KEY=<AWS_SECRET_ACCESS_KEY>
+   
+
+ Run, export GITLAB_PASSWORD=<GITLAB_PASSWORD>
+   
+        
+
+To generate your own password use a password generator uncheck Include Symbols: and check Exclude Ambiguous Characters to avoid issues with password polices across architecture components. The requirements below generally work fine:
+
+
+
+
+
+
+ Configure Ansible output logging
+   
+        
+ Open a terminal edit gitlab-environment-toolkit/ansible/ansible.cfg adding the following lines under [defaults]:   
+        
+
+    log_path = /gitlab-environment-toolkit/ansible/environments/3k/inventory/ansible.log
+    display_args_to_stdout = True
+
+
+
+
+
+
+ Run a Toolkit Docker Container in the interactive passing the environment variables and mounting the required volume folders.
+First, take a note of the full path to the folders that follows:
+   
+       
+
+ gitlab-environment-toolkit/keys
+   
+
+ gitlab-environment-toolkit/ansible/environments/3k
+   
+        
+
+ gitlab-environment-toolkit/ansible/ansible.cfg
+   
+       
+
+ gitlab-environment-toolkit/terraform/environments/3k
+   
+
+ Replace the following markers with the full path in the Docker command below:
+   
+     
+
+ <host_full_path_to_keys>
+   
+
+ <host_full_path_to_ansible_environment_3k>
+   
+
+ <host_full_path_to_ansible.cfg_file>
+   
+   
+
+ <host_path_to_terraform_environment_3k>
+   
+       
+
+
+
+
+
+
+
+docker run -it \
+-v <host_full_path_to_keys>:/gitlab-environment-toolkit/keys \
+-v <host_full_path_to_ansible_environment_3k>:/gitlab-environment-toolkit/ansible/environments/3k \
+-v <host_full_path_to_ansible.cfg_file>:/gitlab-environment-toolkit/ansible/ansible.cfg \
+-v <host_path_to_terraform_environment_3k>:/gitlab-environment-toolkit/terraform/environments/3k \
+-e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+-e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+-e GITLAB_PASSWORD=$GITLAB_PASSWORD \
+registry.gitlab.com/gitlab-org/gitlab-environment-toolkit:latest
+
+
+In my instance, the paths looks like this:
+
+docker run -it  \
+-v /home/ec2-user/gitlab-environment-toolkit/keys:/gitlab-environment-toolkit/keys \
+-v /home/ec2-user/gitlab-environment-toolkit/ansible/environments/3k:/gitlab-environment-toolkit/ansible/environments/3k \
+-v /home/ec2-user/gitlab-environment-toolkit/ansible/ansible.cfg:/gitlab-environment-toolkit/ansible/ansible.cfg \
+-v /home/ec2-user/gitlab-environment-toolkit/terraform/environments/3k:/gitlab-environment-toolkit/terraform/environments/3k \
+-e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+-e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+-e GITLAB_PASSWORD=$GITLAB_PASSWORD \
+registry.gitlab.com/gitlab-org/gitlab-environment-toolkit:latest
+
+
+
+
+        
+      
+
+
+ Run the Terraform sequence to provision the required infrastructure from within the container
+   
+    
+
+ Install Terraform in the container with mise install terraform -y
+   
+       
+
+ Run cd /gitlab-environment-toolkit/terraform/environments/3k
+   
+        
+
+ Run terraform init
+   
+       
+
+ Run terraform plan -out 3k.aws_ec2.tfplan
+   
+       
+
+ Run terraform apply 3k.aws_ec2.tfplan
+   
+
+ (w/o "plan") Enter 'yes' to perform the actions   
+        
+
+
+
+ Inside the container let's run the Ansible scripts
+   
+        
+
+ Run cd /gitlab-environment-toolkit/ansible
+   
+         
+
+ To validate Ansible configuration run ansible all -m ping -i environments/3k/inventory --list-hosts
+   
+     
+ Run ansible-playbook -i environments/3k/inventory playbooks/all.yml
+
+
+NOTE: This might take up to an hour to complete
+
+   
+        
+ Once the process is complete, with no ERRORs, you may exit the container by typing exit (or via Ctrl+D)   
+        
+
+Testing the GitLab Deployment
+
+
+
+
+ Back to the instance terminal lets ssh in a rails node to check gitlab status and puma logs.
+   
+
+ Running something similar to ssh -i /home/ec2-user/gitlab-environment-toolkit/keys/id_rsa ubuntu@your-rails-node-public-dns
+   
+        
+
+ Run sudo gitlab-ctl status
+   
+        
+
+ Run sudo gitlab-ctl tail puma
+   
+ Access the GitLab application using http://<your_elastic_ip> (same as provided on external_url in vars.yaml)
+   
+      
+
+ Login with user root and the password as set in the variable GITLAB_PASSWORD
+   
+       
+
+ Create an issue in a new project, including the default README.md file   
+        
+
+ Create a merge request (MR) from the issue and change the project's README.md by adding as title Congratulations! You deployed GitLab HA with GET
+   
+
+ Commit change and merge the MR   
+
+
+
+
+
+
+
+AWS 3K Reference Architecture with cloud managed services
+
+
+❗ This is a continuation of the AWS 3K deployment workshop with GET. It assumes you have a working deployment of GitLab deployed with GET. If you don't have this, create an issue complete the prerequesite steps.  There is an optional step to migrate your data from the previous issue's PostgreSQL database.
+
+
+Replacing Omnibus Components for AWS managed Services
+We will replace PostgreSQL/Patroni and PgBouncer with Amazon RDS, and Redis/Sentinel with Amazon ElastiCache]. We will also replace the Internal HAProxy Load Balancer that sits in front of praefect with a Network Load Balancer. This transition will be done incrementally.
+First, we'll modify the GET Terraform to provision these components for us.
+
+
+On the instance terminal edit gitlab-environment-toolkit/terraform/environments/3k/variables.tf to define ElastiCache and RDS passwords:
+
+variable "elasticache_redis_password" {
+    type = string
+}
+
+variable "rds_postgres_password" {
+    type = string
+}
+
+
+Create gitlab-environment-toolkit/terraform/environments/3k/outputs.tf files to access the internal module outputs to retrive ElastiCache, RDS and Internal Load Balancer details:
+
+output "rds_postgres_connection" {
+    value = try(module.gitlab_ref_arch_aws.rds_postgres_connection, [])
+}
+
+output "elasticache_redis_persistent_connection" {
+    value = try(module.gitlab_ref_arch_aws.elasticache_redis_connection, [])
+}
+
+output "gitlab_internal_load_balancer_dns" {
+value = try(module.gitlab_ref_arch_aws.elb_internal.elb_internal_host, [])
+}
+
+
+On the instance terminal edit gitlab-environment-toolkit/terraform/environments/3k/environment.tf adding GET required entries to provision Elasticache and RDS and deploy and Internal Load Balancer on ELB.
+
+# ILB 
+elb_internal_create = true
+
+# RDS
+rds_postgres_instance_type = "m5.2xlarge"
+rds_postgres_password = var.rds_postgres_password
+
+# Elasticcache
+elasticache_redis_node_count = 2
+elasticache_redis_instance_type = "m5.large"
+elasticache_redis_password = var.elasticache_redis_password
+
+
+
+Remove the Redis nodes from the same file.  If these nodes aren't removed, the Ansible playbook will not update the /etc/gitlab/gitlab.rb file with the appropriate Redis configuration.  More details can be found in Issue 758
+
+# Redis
+# redis_node_count = 3
+# redis_instance_type = "m5.large"
+
+
+Before running Terraform, export environment variables elasticache_redis_password and rds_postgres_password You can use the same password already set on $GITLAB_PASSWORD
+
+export TF_VAR_rds_postgres_password=$GITLAB_PASSWORD
+export TF_VAR_elasticache_redis_password=$GITLAB_PASSWORD
+
+
+Run a Toolkit Docker Container with the new variables added. The command should look as follows:
+
+docker run -it  \
+-v /home/ec2-user/gitlab-environment-toolkit/keys:/gitlab-environment-toolkit/keys \
+-v /home/ec2-user/gitlab-environment-toolkit/ansible/environments/3k:/gitlab-environment-toolkit/ansible/environments/3k \
+-v /home/ec2-user/gitlab-environment-toolkit/terraform/environments/3k:/gitlab-environment-toolkit/terraform/environments/3k \
+-e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+-e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+-e GITLAB_PASSWORD=$GITLAB_PASSWORD \
+-e TF_VAR_rds_postgres_password=$GITLAB_PASSWORD \
+-e TF_VAR_elasticache_redis_password=$GITLAB_PASSWORD \
+registry.gitlab.com/gitlab-org/gitlab-environment-toolkit:latest
+
+
+Inside the container run the commands below:   
+
+
+ Install Terraform if it's not present with mise install terraform -y
+  
+
+ Run cd /gitlab-environment-toolkit/terraform/environments/3k/
+   
+ Run terraform apply. This should add 20 new resources, and usually take 8-10 minutes   
+        
+ Run terraform output. Copy the output and post as a comment on this issue
+ 
+ 
+ Now let's configure GitLab to use the RDS, Elasticache, and the ELB. We going to do that in three steps:
+1. Let's configure GitLab to use the new resources;
+1. Check that the application is working
+1. Optionally migrate the data
+1. Remove the remaining unnecessary components
+
+In the instance edit /home/ec2-user/gitlab-environment-toolkit/ansible/environments/3k/inventory/vars.yml adding the following lines:
+
+Replace <internal_lb_host>, <redis_host> and <postgres_host> respectively for the terraform outputs: gitlab_internal_load_balancer_dns, elasticache_redis_address and rds_host.
+
+postgres_external: true
+internal_lb_host: "<internal_lb_host>"
+redis_host: "<redis_host>"
+postgres_host: "<postgres_host>"
+
+
+Something similar to the following:
+
+postgres_external: true
+internal_lb_host: "gitlab-afonseca-3k-paris-int-4353bac0a6a67bb2.elb.eu-west-3.amazonaws.com"
+redis_host: "master.gitlab-afonseca-3k-paris-redis.jrodnd.euw3.cache.amazonaws.com"
+postgres_host: "gitlab-afonseca-3k-paris-rds.coy2o6w62emn.eu-west-3.rds.amazonaws.com"
+
+
+⚠ Optional - Backup your PostgreSQL data before proceeding.  We'll be replacing the database.  Git data will still live on Gitaly, but PostgreSQL has the required metadata to render it in the web application.
+
+Access a rails node and validate S3 is being used as the backup location
+run ssh -i /home/ec2-user/gitlab-environment-toolkit/keys/id_rsa ubuntu@your_rails_public_dns
+run sudo vim /etc/gitlab/gitlab.rb
+retrieve the name of your S3 bucket from gitlab_rails['backup_upload_remote_directory']
+
+Perform a GitLab Backup by running sudo gitlab-backup create
+ Validate the backup is in the bucket listed above
+ 
+ 
+ Inside the container let's run the Ansible scripts
+ 
+ Run cd /gitlab-environment-toolkit/ansible
+ Test connection with hosts ansible all -m ping -i environments/3k/inventory --list-hosts
+ Run ansible-playbook -i environments/3k/inventory/ playbooks/all.yml
+ Manual fix of the task Get Omnibus Postgres Primary gitlab-org/gitlab-environment-toolkit!555 (merged) when running GET older than 2.0.1
+ Once the process is complete exit the container with exit
+ 
+ 
+ Access a rails node and confirm that is using the RDS and Elasticache in the terminal run:
+ run ssh -i /home/ec2-user/gitlab-environment-toolkit/keys/id_rsa ubuntu@your_rails_public_dns
+ run sudo vim /etc/gitlab/gitlab.rb
+ Check the configurations: gitlab_rails['db_host'], gitlab_rails['redis_host'] and gitaly_address. They must be pointing for postgres_host, redis_host and internal_lb_host provide on step 7
+   
+
+
+
+
+        
+Test the GitLab application using http://<your_elastic_ip> the same information provided on external_url in the vars.yml. With user root and the password as set in the variable GITLAB_PASSWORD. If everything is working as expected move to the next step.
+
+
+ Optional - Restore your PostgreSQL data if you backed it up earlier.
+ 
+ Access a rails node to perform the GitLab restore
+   
+
+ run ssh -i /home/ec2-user/gitlab-environment-toolkit/keys/id_rsa ubuntu@your_rails_public_dns
+ 
+ 
+ Install the awscli following AWS instructions
+   
+       
+
+        
+      
+ Use the awscli to pull the backup to the local instance
+   
+
+ run `sudo aws s3 cp s3://<your_bucket>/<your_backup>.tar /var/opt/gitlab/backups/   
+        
+
+ set the ownership to the git user with sudo chown git:git /var/opt/gitlab/backups/<your_backup>.tar
+   
+       
+      
+ Stop the required gitlab processes that access the database
+   
+        
+
+ sudo gitlab-ctl stop puma
+   
+        
+
+ sudo gitlab-ctl stop sidekiq
+   
+      
+      
+ Restore your backup (notice the _gitlab_backup.tar suffix is dropped)
+   
+ sudo gitlab-backup restore BACKUP=<your_backup_without_gitlab_backup.tar>
+
+Example, if your backup is 11493107454_2018_04_25_10.6.4-ce_gitlab_backup.tar, you would run sudo gitlab-backup restore BACKUP=11493107454_2018_04_25_10.6.4-ce
+
+
+   
+      
+ Restart the GitLab service with sudo gitlab-ctl restart and check it with sudo gitlab-rake gitlab:check SANITIZE=true
+   
+        
+      
+ Validate your project data is now accessible through the web application
+ 
+ 
+ 
+ Remove the PostgreSQL, PgBouncer and HAProxy Internal Load Balancer editing /home/ec2-user/gitlab-environment-toolkit/terraform/environments/3k/environment.tf and commenting/removing the lines below:   
+       
+
+    # postgres_node_count = 3
+    # postgres_instance_type = "m5.large"
+
+    # pgbouncer_node_count = 3
+    # pgbouncer_instance_type = "c5.large"
+
+    # haproxy_internal_node_count = 1
+    # haproxy_internal_instance_type = "c5.large"
+
+
+
+
+        
+      
+ Run the Toolkit's container running the command below:   
+     
+
+docker run -it  \
+-v /home/ec2-user/gitlab-environment-toolkit/keys:/gitlab-environment-toolkit/keys \
+-v /home/ec2-user/gitlab-environment-toolkit/ansible/environments/3k:/gitlab-environment-toolkit/ansible/environments/3k \
+-v /home/ec2-user/gitlab-environment-toolkit/terraform/environments/3k:/gitlab-environment-toolkit/terraform/environments/3k \
+-e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+-e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+-e GITLAB_PASSWORD=$GITLAB_PASSWORD \
+-e TF_VAR_rds_postgres_password=$GITLAB_PASSWORD \
+-e TF_VAR_elasticache_redis_password=$GITLAB_PASSWORD \
+registry.gitlab.com/gitlab-org/gitlab-environment-toolkit:latest
+
+
+
+
+        
+      
+ Inside the container run the commands that follow:   
+        
+ cd /gitlab-environment-toolkit/terraform/environments/3k
+   
+       
+ terraform apply this should destroy 19 resources   
+        
+This should not affect the application since the components are no longer in use. Once you are done with the environment, don't forget to remove all deployed resources on AWS by following the next and final step.
+
+
+        
+      
+ Inside the container, once you are done with your environment, don't forget to tear it down by following these steps:   
+        
+
+ cd /gitlab-environment-toolkit/terraform/environments/3k
+   
+        
+
+ terraform destroy
+   
+
+ Terminate GET instance manually through AWS console
+ 
+ 
+ 
+ 
