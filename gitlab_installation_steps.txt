@@ -6,6 +6,8 @@ curl -s https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script
 
 sudo EXTERNAL_URL="http://ip-address" GITLAB_ROOT_PASSWORD="somethingYouChoose" apt-get install gitlab-ee
 
+If the password shown here doesn't work, you must reset the admin password following https://docs.gitlab.com/ee/security/reset_user_password.html#reset-your-root-password.
+
 Configure GitLab
 After installation, GitLab will be configured automatically. If you need to modify settings (like changing ports, email settings, etc.), you can edit the configuration file located at:
 
@@ -20,3 +22,16 @@ Open a browser and go to http://your-domain-or-ip. You’ll be prompted to set a
 sudo gitlab-ctl start   # Start GitLab
 sudo gitlab-ctl stop    # Stop GitLab
 sudo gitlab-ctl restart # Restart GitLab
+
+
+
+REMOVAL GITLAB-EE
+
+sudo gitlab-ctl stop
+
+sudo apt-get remove --purge gitlab-ee
+sudo apt-get autoremove --purge
+sudo apt-get clean
+sudo rm -rf /var/opt/gitlab
+sudo rm -rf /etc/gitlab
+sudo rm -rf /var/log/gitlab
