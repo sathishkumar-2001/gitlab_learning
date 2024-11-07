@@ -1,0 +1,22 @@
+sudo apt-get update
+
+sudo apt-get install -y curl ca-certificates tzdata perl
+
+curl -s https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh | sudo bash
+
+sudo EXTERNAL_URL="http://ip-address" GITLAB_ROOT_PASSWORD="somethingYouChoose" apt-get install gitlab-ee
+
+Configure GitLab
+After installation, GitLab will be configured automatically. If you need to modify settings (like changing ports, email settings, etc.), you can edit the configuration file located at:
+
+sudo nano /etc/gitlab/gitlab.rb
+
+Reconfigure GitLab
+sudo gitlab-ctl reconfigure
+
+Access GitLab
+Open a browser and go to http://your-domain-or-ip. You’ll be prompted to set a password for the default root account and can then log in.
+
+sudo gitlab-ctl start   # Start GitLab
+sudo gitlab-ctl stop    # Stop GitLab
+sudo gitlab-ctl restart # Restart GitLab
